@@ -21,6 +21,8 @@ const COLUMNS: { key: string; label: string; sortable: boolean }[] = [
   { key: 'freq_cycle', label: 'Freq Cycle', sortable: true },
   { key: 'freq_tier', label: 'Freq Tier', sortable: true },
   { key: 'purity', label: 'Purity', sortable: true },
+  { key: 'risk_level', label: 'Risk', sortable: true },
+  { key: 'confidence', label: 'Confidence', sortable: true },
   { key: 'funded_by', label: 'Funded By', sortable: false },
   { key: 'total_amount', label: 'Total Amount', sortable: true },
   { key: 'tx_in_period', label: 'TX in Period', sortable: true },
@@ -37,6 +39,18 @@ function truncateAddress(addr: string | null): string {
   return `${a.slice(0, 7)}...${a.slice(-5)}`;
 }
 
+function riskClass(level: string | null): string {
+  if (level === 'high') return 'risk-high';
+  if (level === 'medium') return 'risk-medium';
+  return 'risk-low';
+}
+
+function confidenceClass(level: string | null): string {
+  if (level === 'high') return 'conf-high';
+  if (level === 'medium') return 'conf-medium';
+  return 'conf-low';
+}
+
 function formatAmount(amount: number | null, tokenCount: number | null): React.ReactNode {
   if (amount === null || amount === undefined || amount === 0) {
     return (
@@ -45,9 +59,10 @@ function formatAmount(amount: number | null, tokenCount: number | null): React.R
       </div>
     );
   }
-  const formatted = amount >= 1000
-    ? `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-    : `$${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  const formatted =
+    amount >= 1000
+      ? `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+      : `$${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const tokens = tokenCount || 0;
   return (
     <div className="amount-cell">
@@ -71,16 +86,15 @@ function formatDateTime(dateStr: string | null): string {
   if (!dateStr) return '\u2014';
   try {
     const d = new Date(dateStr);
-    const date = d.toISOString().slice(0, 10).replace(/-/g, '-');
+    const date = d.toISOString().slice(0, 10);
     const time = d.toISOString().slice(11, 16);
-    return `${date.replace(/-/g, '-')} | ${time}`;
+    return `${date} | ${time}`;
   } catch {
     return dateStr;
   }
 }
 
 const WalletTable: React.FC<WalletTableProps> = ({ wallets, sort, order, onSort, onDataChange }) => {
-
   const handleTypeChange = async (address: string, newType: string) => {
     try {
       await updateWalletReview(address, { client_type: newType, review_status: 'Reviewed' });
@@ -115,21 +129,16 @@ const WalletTable: React.FC<WalletTableProps> = ({ wallets, sort, order, onSort,
         <tbody>
           {wallets.map((w) => (
             <tr key={w.address}>
-              {/* Address */}
               <td>
                 <span className="address-cell" title={w.address}>
                   {truncateAddress(w.address)}
                 </span>
               </td>
 
-              {/* Data Source */}
               <td>
-                <span className={`badge badge-${w.data_source || 'R'}`}>
-                  {w.data_source || 'R'}
-                </span>
+                <span className={`badge badge-${w.data_source || 'R'}`}>{w.data_source || 'R'}</span>
               </td>
 
-              {/* Client Type - editable dropdown */}
               <td>
                 <select
                   className="type-select"
@@ -137,74 +146,87 @@ const WalletTable: React.FC<WalletTableProps> = ({ wallets, sort, order, onSort,
                   onChange={(e) => handleTypeChange(w.address, e.target.value)}
                 >
                   {CLIENT_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
                   ))}
                 </select>
               </td>
 
-              {/* Client Tier */}
               <td className="tier-cell">{w.client_tier || '\u2014'}</td>
 
-              {/* Review */}
               <td>
-                <span className={`review-badge ${
-                  w.review_status === 'AI Review' ? 'review-ai' :
-                  w.review_status === 'Reviewed' ? 'review-done' : 'review-manual'
-                }`}>
-                  {w.review_status === 'AI Review' ? 'A' :
-                   w.review_status === 'Manual Review' ? 'M' :
-                   w.review_status === 'Reviewed' ? 'R' : '\u2014'}
+                <span
+                  className={`review-badge ${w.review_status === 'AI Review'
+                      ? 'review-ai'
+                      : w.review_status === 'Reviewed'
+                        ? 'review-done'
+                        : 'review-manual'
+                    }`}
+                >
+                  {w.review_status === 'AI Review'
+                    ? 'A'
+                    : w.review_status === 'Manual Review'
+                      ? 'M'
+                      : w.review_status === 'Reviewed'
+                        ? 'R'
+                        : '\u2014'}
                 </span>
               </td>
 
-              {/* Freq Cycle */}
               <td className="freq-cell">{w.freq_cycle || '\u2014'}</td>
-
-              {/* Freq Tier */}
               <td className="freq-cell">{w.freq_tier || '\u2014'}</td>
 
-              {/* Purity */}
               <td>
-                <span className={`purity-${w.purity || 'C'}`}>
-                  {w.purity || '\u2014'}
+                <span className={`purity-${w.purity || 'C'}`}>{w.purity || '\u2014'}</span>
+              </td>
+
+              {/* Risk */}
+              <td>
+                <span className={`badge ${riskClass(w.risk_level)}`} title={`Score: ${Math.round(w.risk_score ?? 0)}`}>
+                  {(w.risk_level || 'low').toUpperCase()} ({Math.round(w.risk_score ?? 0)})
                 </span>
               </td>
 
-              {/* Funded By */}
+              {/* Confidence */}
+              <td>
+                <span className={`badge ${confidenceClass(w.confidence)}`}>
+                  {(w.confidence || 'low').toUpperCase()}
+                </span>
+              </td>
+
               <td>
                 {w.funded_by ? (
                   <span className="funded-by-cell" title={w.funded_by}>
                     {truncateAddress(w.funded_by)}
                   </span>
-                ) : '\u2014'}
+                ) : (
+                  '\u2014'
+                )}
               </td>
 
-              {/* Total Amount */}
               <td>{formatAmount(w.total_amount, w.token_count)}</td>
-
-              {/* TX in Period */}
               <td style={{ textAlign: 'right' }}>{w.tx_in_period?.toLocaleString() || 0}</td>
-
-              {/* Wallet Created */}
               <td className="date-cell">{formatDate(w.wallet_created)}</td>
-
-              {/* Collection Date */}
               <td className="date-cell">{formatDate(w.collection_date)}</td>
-
-              {/* Update Time */}
               <td className="date-cell">{formatDateTime(w.update_time)}</td>
 
-              {/* Reviewer */}
               <td>
-                <span className={
-                  w.review_status === 'AI Review' ? 'review-ai' :
-                  w.review_status === 'Reviewed' ? 'review-done' : 'review-manual'
-                }>
+                <span
+                  className={
+                    w.review_status === 'AI Review'
+                      ? 'review-ai'
+                      : w.review_status === 'Reviewed'
+                        ? 'review-done'
+                        : 'review-manual'
+                  }
+                >
                   {w.review_status || 'Manual Review'}
                 </span>
               </td>
             </tr>
           ))}
+
           {wallets.length === 0 && (
             <tr>
               <td colSpan={COLUMNS.length} style={{ textAlign: 'center', padding: '40px', color: '#8b949e' }}>

@@ -1,3 +1,4 @@
+
 export interface Wallet {
   address: string;
   client_type: string | null;
@@ -21,6 +22,18 @@ export interface Wallet {
   label: string | null;
   notes: string | null;
   on_watchlist: boolean | null;
+
+  // Super Analysis v2
+  risk_score: number | null;
+  risk_level: "low" | "medium" | "high" | null;
+  confidence: "low" | "medium" | "high" | null;
+  contamination_score: number | null;
+
+  tx_30d: number | null;
+  tx_90d: number | null;
+  volume_30d_usd: number | null;
+  volume_90d_usd: number | null;
+  active_days_30d: number | null;
 }
 
 export interface WalletListResponse {

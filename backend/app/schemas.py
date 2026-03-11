@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
 from datetime import date, datetime
+from typing import Dict, List, Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
 class WalletBase(BaseModel):
@@ -8,6 +9,8 @@ class WalletBase(BaseModel):
 
 
 class WalletResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     address: str
     client_type: Optional[str] = None
     client_tier: Optional[str] = None
@@ -30,9 +33,6 @@ class WalletResponse(BaseModel):
     label: Optional[str] = None
     notes: Optional[str] = None
     on_watchlist: Optional[bool] = None
-
-    class Config:
-        from_attributes = True
 
 
 class WalletListResponse(BaseModel):
@@ -77,12 +77,11 @@ class LabelCreate(BaseModel):
 
 
 class LabelResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     address: str
     label: str
     category: str
     is_toxic: bool
     source: Optional[str] = None
     created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True

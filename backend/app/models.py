@@ -1,6 +1,18 @@
-from sqlalchemy import Column, String, Integer, BigInteger, Numeric, Boolean, Date, DateTime, Text, SmallInteger, Index
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Integer,
+    Numeric,
+    SmallInteger,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
+
 from app.database import Base
 
 
@@ -17,7 +29,7 @@ class Wallet(Base):
     purity = Column(String(5))
     review_status = Column(String(20), default="Manual Review")
 
-    # Data Source
+    # Data source
     data_source = Column(String(5), default="R")
 
     # On-chain data
@@ -41,7 +53,6 @@ class Wallet(Base):
     label = Column(String(100))
     notes = Column(Text)
     on_watchlist = Column(Boolean, default=False)
-
     created_at = Column(DateTime, default=func.now())
 
 
