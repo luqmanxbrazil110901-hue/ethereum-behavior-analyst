@@ -1,6 +1,6 @@
 import logging
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
@@ -25,6 +25,9 @@ class ClassificationEngine:
         tx_count = await blockchain_service.get_transaction_count(address)
         is_contract = await blockchain_service.is_contract(address)
         eth_price = await blockchain_service.get_eth_price() or 0.0
+
+        # Backfill local tx history if the chain shows activity but DB is still empty.
+        await self._backfill_transactions_if_needed(address, tx_count, db)
 
         known = db.query(KnownLabel).filter(KnownLabel.address == address).first()
         txs = (
@@ -128,6 +131,11 @@ class ClassificationEngine:
             "last_seen": last_seen,
             "label": known.label if known else None,
             "on_watchlist": wallet.on_watchlist if wallet else False,
+            "risk_score": risk_score,
+            "risk_level": risk_level,
+            "confidence": confidence,
+            "contamination_score": contamination_score,
+            **window,
         }
 
         if wallet:
@@ -154,12 +162,50 @@ class ClassificationEngine:
         return {
             **wallet_data,
             "notes": wallet.notes,
-            "risk_score": risk_score,
-            "risk_level": risk_level,
-            "confidence": confidence,
-            "contamination_score": contamination_score,
-            **window,
+            "reasons": reasons,
         }
+
+    async def _backfill_transactions_if_needed(
+        self,
+        address: str,
+        tx_count: Optional[int],
+        db: Session,
+    ) -> None:
+        """Backfill a recent block window if the wallet has chain activity but no local history."""
+        local_count = (
+            db.query(Transaction)
+            .filter(or_(Transaction.from_address == address, Transaction.to_address == address))
+            .count()
+        )
+        if local_count > 0:
+            return
+        if not tx_count or tx_count <= 0:
+            return
+
+        current_block = await blockchain_service.get_block_number()
+        if current_block is None:
+            return
+
+        from_block = max(0, current_block - 5000)
+        try:
+            scanned = await blockchain_service.get_wallet_transactions_from_blocks(
+                address,
+                from_block,
+                current_block,
+            )
+            inserted = 0
+            for tx in scanned:
+                exists = db.query(Transaction).filter(Transaction.tx_hash == tx["tx_hash"]).first()
+                if not exists:
+                    db.add(Transaction(**tx))
+                    inserted += 1
+
+            if inserted:
+                db.commit()
+                logger.info("Backfilled %s tx(s) for %s", inserted, address)
+        except Exception as exc:
+            db.rollback()
+            logger.warning("Backfill failed for %s: %s", address, exc)
 
     def _compute_window_metrics(self, txs: List[Transaction], eth_price: float) -> Dict[str, float]:
         now = datetime.utcnow()
@@ -233,7 +279,7 @@ class ClassificationEngine:
         contamination_score: float,
         tx_count_period: int,
         is_contract: bool,
-    ) -> tuple[float, str]:
+    ) -> Tuple[float, str]:
         score = 5.0
 
         if purity == "P":

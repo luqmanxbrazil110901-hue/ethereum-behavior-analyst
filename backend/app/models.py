@@ -53,6 +53,15 @@ class Wallet(Base):
     label = Column(String(100))
     notes = Column(Text)
     on_watchlist = Column(Boolean, default=False)
+    risk_score = Column(Numeric, default=0)
+    risk_level = Column(String(10))
+    confidence = Column(String(10))
+    contamination_score = Column(Numeric, default=0)
+    tx_30d = Column(Integer, default=0)
+    tx_90d = Column(Integer, default=0)
+    volume_30d_usd = Column(Numeric, default=0)
+    volume_90d_usd = Column(Numeric, default=0)
+    active_days_30d = Column(Integer, default=0)
     created_at = Column(DateTime, default=func.now())
 
 

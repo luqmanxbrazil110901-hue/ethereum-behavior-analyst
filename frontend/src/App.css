@@ -494,3 +494,19 @@ body {
 .tier-cell, .freq-cell {
   color: #c8cdd5;
 }
+
+.risk-high { background:#3a1111; color:#ff6b6b; border:1px solid #ff6b6b55; }
+.risk-medium { background:#3a2a11; color:#f0b429; border:1px solid #f0b42955; }
+.risk-low { background:#113a1f; color:#4cd964; border:1px solid #4cd96455; }
+
+.conf-high { background:#112a3a; color:#4da3ff; border:1px solid #4da3ff55; }
+.conf-medium { background:#1d2b3a; color:#7fb3ff; border:1px solid #7fb3ff55; }
+.conf-low { background:#2a2f36; color:#9aa4af; border:1px solid #9aa4af55; }
+
+.badge {
+display:inline-block;
+padding:2px 8px;
+border-radius:10px;
+font-size:12px;
+font-weight:600;
+}

@@ -33,6 +33,16 @@ class WalletResponse(BaseModel):
     label: Optional[str] = None
     notes: Optional[str] = None
     on_watchlist: Optional[bool] = None
+    risk_score: Optional[float] = None
+    risk_level: Optional[str] = None
+    confidence: Optional[str] = None
+    contamination_score: Optional[float] = None
+    tx_30d: Optional[int] = None
+    tx_90d: Optional[int] = None
+    volume_30d_usd: Optional[float] = None
+    volume_90d_usd: Optional[float] = None
+    active_days_30d: Optional[int] = None
+    reasons: Optional[List[str]] = None
 
 
 class WalletListResponse(BaseModel):
